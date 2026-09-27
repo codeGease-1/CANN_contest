@@ -7,6 +7,7 @@ project(rotary_pos_emb_custom LANGUAGES ASC CXX)
 set(CMAKE_CXX_STANDARD 14)
 
 option(ROPE_USE_CAST_ROUND "Use CAST_ROUND for FP16 output conversion" OFF)
+option(ROPE_REDUCE_ANGLE "Reduce rotation angles before Cos/Sin (diagnostic A/B)" OFF)
 
 if(DEFINED NPU_ARCH)
     set(SOC_ARCH ${NPU_ARCH})
@@ -55,4 +56,8 @@ target_compile_options(rotary_pos_emb_eval PRIVATE
 
 if(ROPE_USE_CAST_ROUND)
     target_compile_definitions(rotary_pos_emb_eval PRIVATE ROPE_USE_CAST_ROUND=1)
+endif()
+
+if(ROPE_REDUCE_ANGLE)
+    target_compile_definitions(rotary_pos_emb_eval PRIVATE ROPE_REDUCE_ANGLE=1)
 endif()
