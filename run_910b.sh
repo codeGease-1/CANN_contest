@@ -16,11 +16,7 @@ CAST_OPTION=()
 if [[ "${ROPE_USE_CAST_ROUND:-0}" == "1" ]]; then
     CAST_OPTION+=("-DROPE_USE_CAST_ROUND=ON")
 fi
-ANGLE_OPTION=()
-if [[ "${ROPE_REDUCE_ANGLE:-0}" == "1" ]]; then
-    ANGLE_OPTION+=("-DROPE_REDUCE_ANGLE=ON")
-fi
-cmake -S "${SCRIPT_DIR}" -B "${BUILD_DIR}" -DNPU_ARCH="${NPU_ARCH}" "${CAST_OPTION[@]}" "${ANGLE_OPTION[@]}"
+cmake -S "${SCRIPT_DIR}" -B "${BUILD_DIR}" -DNPU_ARCH="${NPU_ARCH}" "${CAST_OPTION[@]}"
 cmake --build "${BUILD_DIR}" -j"${JOBS:-4}"
 
 python3 "${SCRIPT_DIR}/scripts/run_device_matrix.py" \
