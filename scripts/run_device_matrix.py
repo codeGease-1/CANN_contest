@@ -31,6 +31,22 @@ CASES = [
 ]
 
 
+def diagnostic_cases():
+    positions = [0, 1, 8192, 32768, 65535, 131072]
+    cases = []
+    for dtype in ("float32", "float16"):
+        prefix = "f32" if dtype == "float32" else "f16"
+        for position in positions:
+            cases.append((
+                f"diag_{prefix}_seq_p{position}", 1, 1, 1, 64,
+                dtype, f"fixed_{position}", "sequence"))
+        for index in (0, 1, 2, 3, 8, 16, 31):
+            cases.append((
+                f"diag_{prefix}_onehot_i{index}", 1, 1, 1, 64,
+                dtype, "fixed_131072", f"onehot_{index}"))
+    return cases
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -42,12 +58,21 @@ def sha256(path: Path) -> str:
 def make_input(rng, b, s, h, dim, dtype, position_mode, x_mode):
     if x_mode == "random":
         x = rng.uniform(-10.0, 10.0, size=(b, s, h, dim))
+    elif x_mode.startswith("onehot_"):
+        x = np.zeros((b, s, h, dim), dtype=np.float32)
+        index = int(x_mode[len("onehot_"):])
+        if index >= dim:
+            raise ValueError(f"onehot index {index} is outside dim={dim}")
+        x[..., index] = 1.0
     else:
         x = np.arange(b * s * h * dim, dtype=np.float32).reshape(b, s, h, dim)
         x = (x % 97.0) - 48.0
     x = x.astype(np.float16 if dtype == "float16" else np.float32)
     if position_mode == "zero":
         positions = np.zeros((b, s), dtype=np.int32)
+    elif position_mode.startswith("fixed_"):
+        position = int(position_mode[len("fixed_"):])
+        positions = np.full((b, s), position, dtype=np.int32)
     elif position_mode == "high":
         positions = rng.integers(0, 131073, size=(b, s), dtype=np.int32)
     else:
@@ -67,6 +92,8 @@ def verify(output, golden, dtype):
     diff = np.abs(out_f - golden_f)
     ratio = float(mismatch.size) / max(1, golden.size)
     max_diff = float(np.nanmax(diff)) if diff.size else 0.0
+    dim_error_count = np.sum(~close, axis=(0, 1, 2))
+    dim_max_error = np.max(diff, axis=(0, 1, 2))
     return {
         "passed": mismatch.size / max(1, golden.size) <= 0.01 and max_diff <= max_error,
         "mismatch_count": int(mismatch.size),
@@ -74,6 +101,8 @@ def verify(output, golden, dtype):
         "max_abs_error": max_diff,
         "first_indices": mismatch[:12].tolist(),
         "mod64": np.bincount(mismatch % 64, minlength=64).tolist() if mismatch.size else [0] * 64,
+        "dim_error_count": dim_error_count.astype(np.int64).tolist(),
+        "dim_max_error": dim_max_error.astype(np.float32).tolist(),
     }
 
 
@@ -84,6 +113,8 @@ def main():
     parser.add_argument("--output-root", type=Path, default=Path("eval_runs"))
     parser.add_argument("--kernel", type=Path, default=Path("kernel.asc"))
     parser.add_argument("--only", nargs="*")
+    parser.add_argument("--diagnostic", action="store_true",
+                        help="run fixed-position and one-hot diagnostic cases")
     args = parser.parse_args()
 
     exe = args.exe.resolve()
@@ -91,7 +122,8 @@ def main():
     output_root = args.output_root if args.output_root.is_absolute() else workdir / args.output_root
     output_root.mkdir(parents=True, exist_ok=True)
     kernel_path = args.kernel if args.kernel.is_absolute() else workdir / args.kernel
-    selected = [case for case in CASES if not args.only or case[0] in args.only]
+    case_catalog = diagnostic_cases() if args.diagnostic else CASES
+    selected = [case for case in case_catalog if not args.only or case[0] in args.only]
     results = []
     for case_id, b, s, h, dim, dtype, position_mode, x_mode in selected:
         case_dir = output_root / case_id
@@ -132,6 +164,14 @@ def main():
               f"max={result.get('max_abs_error', float('nan'))}")
         if result.get("first_indices"):
             print(f"     first_indices={result['first_indices']}")
+        if args.diagnostic and result.get("dim_error_count"):
+            bad_dims = [
+                (index, count, result["dim_max_error"][index])
+                for index, count in enumerate(result["dim_error_count"])
+                if count
+            ]
+            if bad_dims:
+                print(f"     bad_dims={bad_dims}")
     report = output_root / "report.json"
     report.write_text(json.dumps(results, indent=2), encoding="utf-8")
     print(f"Report: {report}")
