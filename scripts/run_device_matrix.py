@@ -28,6 +28,12 @@ CASES = [
     ("f16_tail96", 2, 8, 17, 96, "float16", "high", "random"),
     ("f32_dim1024", 1, 2, 1, 1024, "float32", "small", "random"),
     ("f16_dim1024", 1, 2, 1, 1024, "float16", "small", "random"),
+    ("f32_p8192", 1, 1, 1, 64, "float32", "fixed_8192", "random"),
+    ("f32_p32768", 1, 1, 1, 64, "float32", "fixed_32768", "random"),
+    ("f32_p65535", 1, 1, 1, 64, "float32", "fixed_65535", "random"),
+    ("f32_p131072", 1, 1, 1, 64, "float32", "fixed_131072", "random"),
+    ("f16_p8192", 1, 1, 1, 64, "float16", "fixed_8192", "random"),
+    ("f16_p131072", 1, 1, 1, 64, "float16", "fixed_131072", "random"),
 ]
 
 
@@ -70,6 +76,9 @@ def make_input(rng, b, s, h, dim, dtype, position_mode, x_mode):
     x = x.astype(np.float16 if dtype == "float16" else np.float32)
     if position_mode == "zero":
         positions = np.zeros((b, s), dtype=np.int32)
+    elif position_mode.startswith("fixed_"):
+        value = int(position_mode.split("_", 1)[1])
+        positions = np.full((b, s), value, dtype=np.int32)
     elif position_mode.startswith("fixed_"):
         position = int(position_mode[len("fixed_"):])
         positions = np.full((b, s), position, dtype=np.int32)

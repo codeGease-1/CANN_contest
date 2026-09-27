@@ -16,6 +16,9 @@ CAST_OPTION=()
 if [[ "${ROPE_USE_CAST_ROUND:-0}" == "1" ]]; then
     CAST_OPTION+=("-DROPE_USE_CAST_ROUND=ON")
 fi
+if [[ "${ROPE_USE_POWER_INV_FREQ:-0}" == "1" ]]; then
+    CAST_OPTION+=("-DROPE_USE_POWER_INV_FREQ=ON")
+fi
 cmake -S "${SCRIPT_DIR}" -B "${BUILD_DIR}" -DNPU_ARCH="${NPU_ARCH}" "${CAST_OPTION[@]}"
 cmake --build "${BUILD_DIR}" -j"${JOBS:-4}"
 
