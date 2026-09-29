@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 option(ROPE_USE_CAST_ROUND "Use CAST_ROUND for FP16 output conversion" OFF)
 option(ROPE_USE_POWER_INV_FREQ "Use Power for inverse-frequency generation" OFF)
+option(ROPE_DEBUG_INTERMEDIATE "Overwrite FP32 output with intermediate diagnostics" OFF)
 
 if(DEFINED NPU_ARCH)
     set(SOC_ARCH ${NPU_ARCH})
@@ -60,4 +61,8 @@ endif()
 
 if(ROPE_USE_POWER_INV_FREQ)
     target_compile_definitions(rotary_pos_emb_eval PRIVATE ROPE_USE_POWER_INV_FREQ=1)
+endif()
+
+if(ROPE_DEBUG_INTERMEDIATE)
+    target_compile_definitions(rotary_pos_emb_eval PRIVATE ROPE_DEBUG_INTERMEDIATE=1)
 endif()
