@@ -19,6 +19,9 @@ fi
 if [[ "${ROPE_USE_POWER_INV_FREQ:-0}" == "1" ]]; then
     CAST_OPTION+=("-DROPE_USE_POWER_INV_FREQ=ON")
 fi
+if [[ "${ROPE_USE_POWER_RECIP_INV_FREQ:-0}" == "1" ]]; then
+    CAST_OPTION+=("-DROPE_USE_POWER_RECIP_INV_FREQ=ON")
+fi
 if [[ "${ROPE_DEBUG_INTERMEDIATE:-0}" == "1" ]]; then
     CAST_OPTION+=("-DROPE_DEBUG_INTERMEDIATE=ON")
 fi

@@ -15,13 +15,15 @@ def expected(position: int, theta: float, dim: int):
     theta_f = np.float32(theta)
     log_theta = np.float32(np.log(theta_f))
     exp_freq = np.exp(np.float32(log_theta * exponent)).astype(np.float32)
-    power_freq = np.power(theta_f, exponent).astype(np.float32)
+    positive_power = np.power(theta_f, -exponent).astype(np.float32)
+    reciprocal_freq = np.divide(np.float32(1.0), positive_power).astype(np.float32)
     position_f = np.float32(position)
     exp_angle = np.multiply(position_f, exp_freq).astype(np.float32)
-    power_angle = np.multiply(position_f, power_freq).astype(np.float32)
+    reciprocal_angle = np.multiply(position_f, reciprocal_freq).astype(np.float32)
     return (
         (exp_freq, exp_angle, np.cos(exp_angle), np.sin(exp_angle)),
-        (power_freq, power_angle, np.cos(power_angle), np.sin(power_angle)),
+        (reciprocal_freq, reciprocal_angle,
+         np.cos(reciprocal_angle), np.sin(reciprocal_angle)),
     )
 
 
@@ -60,7 +62,7 @@ def main():
     print(f"position={args.position} indices={INDICES.tolist()}")
     for name, values in zip(labels, actual):
         print(f"actual_{name}=" + np.array2string(values, precision=9, floatmode="unique"))
-    for variant, values_set in zip(("exp", "power"), expected_variants):
+    for variant, values_set in zip(("exp", "positive_power_reciprocal"), expected_variants):
         print(f"expected_{variant}:")
         for row, (name, values) in enumerate(zip(labels, values_set)):
             diff = np.abs(actual[row] - values)
